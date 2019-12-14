@@ -66,6 +66,7 @@ class KNearestNeighbor(object):
         """
         num_test = X.shape[0]
         num_train = self.X_train.shape[0]
+        assert X.shape[1] == self.X_train.shape[1]
         dists = np.zeros((num_test, num_train))
         for i in range(num_test):
             for j in range(num_train):
@@ -76,8 +77,8 @@ class KNearestNeighbor(object):
                 # not use a loop over dimension, nor use np.linalg.norm().          #
                 #####################################################################
                 # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-                pass
+                d = X[i,:]-self.X_train[j,:];
+                dists[i,j] = np.sqrt(np.sum(np.square(d), axis=1))
 
                 # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
