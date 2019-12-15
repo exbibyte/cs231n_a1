@@ -2,7 +2,7 @@ from builtins import range
 from builtins import object
 import numpy as np
 from past.builtins import xrange
-
+from functools import reduce
 
 class KNearestNeighbor(object):
     """ a kNN classifier with L2 distance """
@@ -77,9 +77,9 @@ class KNearestNeighbor(object):
                 # not use a loop over dimension, nor use np.linalg.norm().          #
                 #####################################################################
                 # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-                d = X[i,:]-self.X_train[j,:];
-                dists[i,j] = np.sqrt(np.sum(np.square(d), axis=1))
-
+                d = X[i:i+1,:]-self.X_train[j:j+1,:];
+                dists[i,j] = np.sqrt(np.sum(np.square(d),axis=1))
+                # dists[i,j] = np.linalg.norm(d)
                 # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
 
@@ -102,7 +102,7 @@ class KNearestNeighbor(object):
             #######################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            dists[i,:] = np.sqrt(np.sum(np.square(self.X_train - X[i:i+1,:]), axis=1))
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -132,7 +132,21 @@ class KNearestNeighbor(object):
         #########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        #(a-b)^2 = a^2 + b^2 - 2ab
+        
+        A=np.sum(np.square(self.X_train), axis=1)
+        B=np.sum(np.square(X), axis=1)
+        #broadcast to gain dimension
+        AA  = np.broadcast_to(A, (num_test,A.shape[0]))
+        #broadcast for combinatorial add
+        C=(AA.T+B).T
+
+        #for ab
+        AB = np.dot(X,self.X_train.T)
+
+        D = np.sqrt(C-2*AB)
+        
+        dists = D
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -165,8 +179,10 @@ class KNearestNeighbor(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            s = np.argsort(dists[i,:])
 
+            closest_y = self.y_train[s][0:k+1]
+            
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
             #########################################################################
             # TODO:                                                                 #
@@ -176,8 +192,28 @@ class KNearestNeighbor(object):
             # label.                                                                #
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+            
+            d = {}
+            for val in closest_y:
+                count = d.get(val,0)
+                d[val] = count + 1
+                        
+            # best,count=0,0
+            # for kk,v in d.items():
+            #     if v>count:
+            #         best,count = kk,v
+            #     elif v==count and kk<best:
+            #         best,count = kk,v
 
-            pass
+            def f_best(acc,curr):
+                if curr[1]>acc[1] or (curr[1]==acc[1] and curr[0]<acc[0]):
+                    return curr
+                else:
+                    return acc
+                
+            best = reduce(f_best,d.items(),(0,0))[0]
+
+            y_pred[i] = best
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
