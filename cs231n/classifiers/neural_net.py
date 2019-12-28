@@ -80,8 +80,13 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        #ReLU activation layer
+        hidden = np.maximum(0,np.dot(W1.T, X.T) + np.expand_dims(b1, axis=1)) # dim:(H,N)
 
+        #softmax layer
+        temp = np.dot(W2.T, hidden) + np.expand_dims(b2, axis=1) # dim:(C,N)
+        scores = temp.T
+        
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
         # If the targets are not given then jump out, we're done
@@ -98,7 +103,17 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        m = np.max(scores) #dim: 1
+        
+        # loss_sample = np.exp(scores) / np.reshape( np.sum(np.exp(scores),axis=1), (N,1))
+        # loss_sample = -np.log(loss_sample[range(N),y])
+        
+        #log(sum{j} e^(s_j-s_max)) - (s_i-s_max)
+        loss_sample = np.log(np.sum(np.exp(scores-m), axis=1)) - (scores[range(N),y]-m) #dim: N
+
+        r = 0.5*reg*(np.sum(W1*W1) + np.sum(W2*W2))
+        # r=0
+        loss = 1/N * np.sum(loss_sample) + r
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -111,8 +126,44 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        dloss = 1.0
 
+        #softmax backprop:
+        
+        #dloss/dscore_i = p - 1(y_k=i)
+        
+        p = np.exp(scores-m) / np.expand_dims(np.sum(np.exp(scores-m), axis=1), axis=1) #dim: (N,C)
+
+        p[range(N),y] -= 1.0
+
+        dscore = dloss * 1/N * p
+
+        #score = Hidden W2
+        #H^T dscore = dW2
+        dW2 = np.dot(hidden,dscore) #dim: (H,C)
+        db2 = np.sum(dscore, axis=0) #dim: C
+
+        dhidden = np.dot(dscore, W2.T) #dim: (N,H)
+
+        #ReLU layer backprop:
+        #Hidden = maximum(0, X W1)
+        
+        temp = np.dot(W1.T, X.T) + np.expand_dims(b1, axis=1)
+        temp2 = temp.T #dim: (N,H)
+        
+        dhidden[temp2<0] = 0
+        
+        dW1 = np.dot(X.T, dhidden) #dim: (D,H)
+        db1 = np.sum(dhidden, axis=0) #dim: H
+        
+        dW1 += reg * W1
+        dW2 += reg * W2
+
+        grads['W1'] = dW1
+        grads['W2'] = dW2
+        grads['b1'] = db1
+        grads['b2'] = db2
+        
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
         return loss, grads
@@ -156,7 +207,9 @@ class TwoLayerNet(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            indices = np.random.choice(range(0,num_train), batch_size)
+            X_batch = X[indices,:]
+            y_batch = y[indices]
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -172,7 +225,15 @@ class TwoLayerNet(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            dW1 = grads['W1']
+            dW2 = grads['W2']
+            db1 = grads['b1']
+            db2 = grads['b2']
+            
+            self.params['W1'] -= dW1 * learning_rate
+            self.params['W2'] -= dW2 * learning_rate
+            self.params['b1'] -= db1 * learning_rate
+            self.params['b2'] -= db2 * learning_rate
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -218,7 +279,8 @@ class TwoLayerNet(object):
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        scores = self.loss(X, y=None)
+        y_pred = np.argmax(scores, axis=1)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
